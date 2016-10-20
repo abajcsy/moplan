@@ -1,0 +1,70 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import pylab
+import matplotlib.image as mpimg
+
+from numpy import *
+from scipy.ndimage.morphology import distance_transform_edt
+
+# returns linear trajectory from (start_x,start_y) to (goal_x,goal_y)
+def get_linear_traj(start_x, start_y, goal_x, goal_y, waypoints):
+	traj = np.zeros((2,waypoints))
+	traj[0][0] = start_x
+	traj[1][0] = start_y
+	dist_x = goal_x-start_x
+	dist_y = goal_y-start_y
+
+	for i in range(1,waypoints):
+		traj(0,i)=traj(0,i-1)+dist_x/(waypoints-1)
+		traj(1,i)=traj(1,i-1)+dist_y/(waypoints-1)
+	
+	return traj
+
+
+if __name__ == '__main__':
+	num_traj_points = 30
+	
+	lambd = 0.2
+	other_weight = 0.1
+	
+	iter = 150	
+	epsilon = 60
+
+	# world params
+	N = 151
+	SX = 10
+	SY = 10
+	GX = 90
+	GY = 90
+	# define pt-based obstacles 
+	OBST = np.array([50,60],[100,70])
+
+	world = np.zeros((N,N))
+
+	# set each pt obstacle into the world
+	for obj in OBST:
+		i = obj[0]
+		j = obj[1]
+		world[i][j] = 1 
+
+	obs_cost = distance_transform_edt(world) # bwdist() in matlab
+	obs_cost(obs_cost > epsilon) = epsilon
+	obs_cost = 1/(2*epsilon)*(obs_cost-epsilon).^2
+	obs_cost_plt = plt.imshow(obs_cost) # figure(1); imagesc(obs_cost') in matlab
+	
+	grad_x = diff(obs_cost,1,1)
+	grad_y = diff(obs_cost,1,2)
+	#hold on
+
+	# make straight line trajectory
+	traj = get_linear_traj(SX, SY, GX, GY, num_traj_points)
+	# figure(1)
+	plt.plot(traj(0,:),traj(1,:),'k')
+
+	(traj_progress, cost) = CHOMP(obs_cost, grad_x, grad_y, traj, iter, lambd, other_weight)
+
+	# figure(1)
+	for i in range(iter):
+		plt.plot(traj_progress(2*i+1,:),traj_progress(2*i+2,:),'g')
+	plt.show()
+		
