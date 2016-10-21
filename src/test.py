@@ -5,7 +5,6 @@ import matplotlib.image as mpimg
 
 from numpy import *
 from scipy.ndimage.morphology import distance_transform_edt
-from chomp import chomp
 
 # returns linear trajectory from (start_x,start_y) to (goal_x,goal_y)
 def get_linear_traj(start_x, start_y, goal_x, goal_y, waypoints):
@@ -20,7 +19,6 @@ def get_linear_traj(start_x, start_y, goal_x, goal_y, waypoints):
 		traj[1][i]=traj[1][i-1]+dist_y/(waypoints-1)
 	
 	return traj
-
 
 if __name__ == '__main__':
 	num_traj_points = 30
@@ -53,8 +51,10 @@ if __name__ == '__main__':
 	obs_cost[obs_cost > epsilon] = epsilon
 	obs_cost = 1.0/(2.0*epsilon)*(obs_cost-epsilon)**2.0
 	
-	# note: can do 255-obs_cost to invert colors for visualization 
+	# note: 255-obs_cost is just to invert the colors for visualization 
 	obs_cost_plt = plt.imshow(obs_cost) 
+	plt.title('Distance Map')
+	# plt.show()
 	
 	print obs_cost
 	
@@ -66,13 +66,4 @@ if __name__ == '__main__':
 	traj = get_linear_traj(SX, SY, GX, GY, num_traj_points)
 	# figure(1)
 	plt.plot(traj[0,:],traj[1,:],'k')
-	plt.title('Distance Map')
 	plt.show()
-
-	(traj_progress, cost) = chomp(obs_cost, grad_x, grad_y, traj, iter, lambd, other_weight)
-
-	# figure(1)
-	for i in range(iter):
-		plt.plot(traj_progress(2*i+1,:),traj_progress(2*i+2,:),'g')
-	plt.show()
-	
