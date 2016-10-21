@@ -21,7 +21,6 @@ def get_linear_traj(start_x, start_y, goal_x, goal_y, waypoints):
 	
 	return traj
 
-
 if __name__ == '__main__':
 	num_traj_points = 30
 	
@@ -35,8 +34,8 @@ if __name__ == '__main__':
 	N = 151
 	SX = 10
 	SY = 10
-	GX = 90
-	GY = 90
+	GX = 140
+	GY = 140
 	# define pt-based obstacles 
 	OBST = np.array([[50,60],[100,70]])
 
@@ -53,8 +52,10 @@ if __name__ == '__main__':
 	obs_cost[obs_cost > epsilon] = epsilon
 	obs_cost = 1.0/(2.0*epsilon)*(obs_cost-epsilon)**2.0
 	
-	# note: can do 255-obs_cost to invert colors for visualization 
+	# note: 255-obs_cost is just to invert the colors for visualization 
 	obs_cost_plt = plt.imshow(obs_cost) 
+	plt.title('Distance Map')
+	# plt.show()
 	
 	print obs_cost
 	
@@ -66,13 +67,10 @@ if __name__ == '__main__':
 	traj = get_linear_traj(SX, SY, GX, GY, num_traj_points)
 	# figure(1)
 	plt.plot(traj[0,:],traj[1,:],'k')
-	plt.title('Distance Map')
-	plt.show()
 
 	(traj_progress, cost) = chomp(obs_cost, grad_x, grad_y, traj, iter, lambd, other_weight)
-
-	# figure(1)
-	for i in range(iter):
-		plt.plot(traj_progress(2*i+1,:),traj_progress(2*i+2,:),'g')
-	plt.show()
 	
+	for i in range(iter):
+		plt.plot(traj_progress[2*i+1,:], traj_progress[2*i+2,:],'g')
+		
+	plt.show()
