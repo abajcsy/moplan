@@ -11,9 +11,8 @@ from math import  *
 
 # --------------------------------------------------#
 # Runs 2D simulation of a 2-link arm in a plane 
-# Add forces to arm using keys:
-# 		q/w - shoulder
-#		o/p - elbow 
+# Add forces to arm by clicking on the plot near 
+# the joint you want to affect. 
 #--------------------------------------------------#
 
 class UserClick():
