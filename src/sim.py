@@ -278,17 +278,28 @@ if __name__ == "__main__":
 	
 	t = 0
 	i = 0
-	while(1 is 1):
-		#print "\n(tau1, tau2): ", (arm.tau1, arm.tau2)
+	
+	num_reached = 0
+	while(num_reached != num_waypoints):
+		print "\n(tau1, tau2): ", (arm.tau1, arm.tau2)
 		
 		# looping until user quits 
 		t += arm.dt
 		
+		# given desired (x,y) forces and current configuration, get 
+		# torques needed to move the end-effector as desired (without inertia/gravity)
+		q = np.array([q_traj[0][0], q_traj[1][0]])
+		Fq = arm.compute_torques(q, Fx)
+		print Fq
+
+		arm.tau1 = Fq[0]
+		arm.tau2 = Fq[1]
+
 		# update arm position given changes in it's state
-		# arm.update()
+		arm.update()
 		
 		# simulate applied torque 
-		arm.tau1 += 0.1
+		#arm.tau1 += 0.1
 		
 		# plot arm
 		plot_arm(fig, arm, xy_traj)
