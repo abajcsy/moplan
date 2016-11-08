@@ -15,31 +15,11 @@ from math import  *
 # the joint you want to affect. 
 #--------------------------------------------------#
 
-class UserClick():
-	x = 0.0
-	y = 0.0
-	new_click = False
-	def __init__(self, x,y):
-		self.x = x
-		self.y = y
-
-	# get user input for updates to torques	
-	def __call__(self, event):
-		print "(user x,y): ", (event.xdata, event.ydata)
-		print "(self x,y): ", (self.x, self.y)
-		# Manipulate the data
-		if event.xdata != self.x and event.ydata != self.y:
-			self.new_click = True
-			self.x = event.xdata
-			self.y = event.ydata
-		else:
-			self.new_click = False
-
 if __name__ == "__main__":
 	# Constants
 	l1 = 1 			# link 1 length 
 	l2 = 1 			# link 2 length
-	m1 = 1 		# link 1 mass 
+	m1 = 1 			# link 1 mass 
 	m2 = 0.5 		# link 2 mass
 	dt = 0.01 		# sim time step
 
