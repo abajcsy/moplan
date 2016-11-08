@@ -158,8 +158,9 @@ if __name__ == "__main__":
 			user_x = user_click.x
 			user_y = user_click.y
 			
-			dist_to_l1 = math.hypot(user_x-x1, user_y-y1)
-			dist_to_l2 = math.hypot(user_x-x2, user_y-y2)
+			# distance to midpoint of l1 and l2
+			dist_to_l1 = math.hypot(user_x-(x1/2), user_y-(y1/2))
+			dist_to_l2 = math.hypot(user_x-((x2+x1)/2), user_y-((y2+y1)/2))
 			
 			if dist_to_l1 < dist_to_l2: # user interacting with shoulder
 				value_l1 = (x1-0)*(user_y-0) - (user_x - 0)*(y1 - 0)
