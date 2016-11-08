@@ -17,10 +17,10 @@ from math import  *
 
 class Arm():
 	# Constants
-	l1 = 1 			# link 1 length 
-	l2 = 1 			# link 2 length
-	m1 = 1 		# link 1 mass 
-	m2 = 0.5 		# link 2 mass
+	l1 = 0 			# link 1 length 
+	l2 = 0 			# link 2 length
+	m1 = 0 			# link 1 mass 
+	m2 = 0 			# link 2 mass
 
 	# Init Conditions
 	theta1 = pi/8 	# shoulder theta
@@ -37,9 +37,9 @@ class Arm():
 	dt = 0.01 		# sim time step
 
 	# compute constants 
-	alpha = m1*r1**2 + m2*(l1**2 + r2**2)
-	beta = m2*l1*r2
-	delta = m2*r2**2
+	alpha = 0
+	beta = 0
+	delta = 0
 	
 	# compute x,y position of arm
 	x1 = r1*cos(theta1)
@@ -48,8 +48,44 @@ class Arm():
 	x2 = x1 + r2*cos(theta1 + theta2) 
 	y2 = y1 + r2*sin(theta1 + theta2)
 
-	#def __init__(self):
+	def __init__(self, l1, l2, m1, m2):
+		self.l1 = l1
+		self.l2 = l2
+		self.m1 = m1
+		self.m2 = m2
+
+		# compute constants 
+		self.alpha = self.m1*self.r1**2 + self.m2*(self.l1**2 + self.r2**2)
+		self.beta = self.m2*self.l1*self.r2
+		self.delta = self.m2*self.r2**2
 	
+	# computes jacobian of end-effector given joint angles q = [q_0, q_1]
+	def Jee(self, q):
+		L1 = self.l1
+		L2 = self.l2
+		Jee = np.array([[-L1*sin(q[0])-L2*sin(q[0]+q[1]), -L2*sin(q[0]+q[1])], 
+						[L1*cos(q[0])+L2*cos(q[0]+q[1]), L2*cos(q[0]+q[1])], 
+						[0, 0], 
+						[0, 0], 
+						[0, 0], 
+						[1, 1]])
+		return Jee
+
+	# given joint configuration and joint angular velocity, 
+	# compute (x,y) velocities
+	def compute_xy_vel(self, q, qdot):
+		Jee = self.Jee(q)
+		xdot = np.dot(Jee, qdot)
+		return xdot
+
+	# given desired (x,y) forces and current configuration, get 
+	# torques needed to move the end-effector as desired (without inertia/gravity)
+	def compute_torques(self, q, Fx):
+		Jee = self.Jee(q)
+		Fq = np.dot(Jee.transpose(), Fx)
+		return Fq
+
+	# updates position of robot given current joint angles, velocities, etc. 
 	def update(self):
 		c2 = cos(self.theta2)
 		s2 = sin(self.theta2)
@@ -142,7 +178,16 @@ def get_line_traj((SX,SY), (GX,GY), num_waypoints):
 
 if __name__ == "__main__":
 
-	arm = Arm()
+	arm = Arm(1,1,0.5,0.5)
+
+	q = np.array([pi/4, 3*pi/8])
+	qdot = np.array([pi/10, pi/10])
+	xdot = arm.compute_xy_vel(q, qdot)
+	print xdot
+
+	Fx = np.array([1, 1, 0, 0, 0, 0])
+	Fq = arm.compute_torques(q, Fx)
+	print Fq
 	
 	fig = plt.figure(figsize=(10,10))
 	plt.clf()
