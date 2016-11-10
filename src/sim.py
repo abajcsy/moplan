@@ -57,7 +57,7 @@ class Arm():
 		self.m1 = 0.5
 		self.m2 = 0.5
 
-		# sent starting configuration
+		# set starting configuration
 		self.theta[0] = pi/8
 		self.theta[1] = pi/8
 
@@ -152,10 +152,6 @@ def fwd_dynamics(M, C, tau, dtheta):
 
 # returns torque tau given M, C, theta, dtheta, ddtheta
 def inv_dynamics(M, C, dtheta, ddtheta):
-	print "inv_d M:", M
-	print "inv_d C:", C
-	print "inv_d dtheta:", dtheta
-	print "inv_d ddtheta:", ddtheta
 	tau = np.dot(M,ddtheta) + np.dot(C, dtheta)
 	return tau
 
@@ -250,12 +246,13 @@ if __name__ == "__main__":
 	ax = fig.add_subplot(111, aspect='equal', autoscale_on=False, xlim=(-2, 2), ylim=(-2, 2))
 	ax.grid()
 	plt.hold(True)
-
-	# generate trajectory
-	SX = 1.0; SY = 1.5
+	
+	# start/end for trajectory
+	arm_pos = arm.fwd_kin_ee()
+	SX = arm_pos[0]; SY = arm_pos[1]
 	GX = -1.0; GY = 1.5
 	num_waypoints = 10
-
+	
 	# get trajectory in world coordinates (x,y) for plotting
 	xy_traj = get_line_traj((SX,SY), (GX,GY), num_waypoints)
 	print "xy_traj: ", xy_traj 
@@ -287,7 +284,49 @@ if __name__ == "__main__":
 
 	print "tau_d:", tau_d
 
-	#if theta_d is not None:
-	plt.plot(xy_traj[:,0],xy_traj[:,1],'ro')
-	plt.show()
+	ddtheta_d_verified = np.zeros((num_waypoints, 2))
+	for t in range(num_waypoints):
+		print tau_d[t][1]
+		theta_t_d = np.array([[theta_d[t][0]], [theta_d[t][1]]])
+		dtheta_t_d = np.array([[dtheta_d[t][0]], [dtheta_d[t][1]]])
+		ddtheta_t_d = np.array([[ddtheta_d[t][0]], [ddtheta_d[t][1]]])
+		tau_t_d = np.array([[tau_d[t][0]], [tau_d[t][1]]])
+
+		# compute new M and C matrices given theta_d
+		M_t_d = compute_M(arm.alpha, arm.beta, arm.delta, theta_t_d)
+		C_t_d = compute_C(arm.alpha, arm.beta, arm.delta, theta_t_d, dtheta_t_d)
+
+		ddtheta_t_d = fwd_dynamics(M_t_d, C_t_d, tau_t_d, dtheta_t_d)
+		ddtheta_d_verified[t][0] = ddtheta_t_d[0]
+		ddtheta_d_verified[t][1] = ddtheta_t_d[1]
+
+	print "ddtheta_d_verified:", ddtheta_d_verified
+
+	# get final trajectory
+	theta_traj = np.zeros((num_waypoints, 2))
+
+
+	for i in range(num_waypoints):
+		plt.clf()
+		ax = fig.add_subplot(111, aspect='equal', autoscale_on=False, xlim=(-2, 2), ylim=(-2, 2))
+		ax.grid()
+	
+		x1 = arm.l1*cos(theta_d[i][0])
+		y1 = arm.l1*sin(theta_d[i][0])
+
+		x2 = x1 + arm.l2*cos(theta_d[i][0] + theta_d[i][1])
+		y2 = y1 + arm.l2*sin(theta_d[i][0] + theta_d[i][1])
+	
+		plt.plot([0, x1], [0, y1], 'b', linewidth=5)
+		plt.plot([x1, x2], [y1, y2], 'b', linewidth=5)
+	
+		# plot joints
+		plt.plot(0,0,'ko')
+		plt.plot(x1, y1, 'ko') 
+		plt.plot(x2, y2, 'ko')
+		plt.plot(xy_traj[:,0],xy_traj[:,1],'ro')
+
+		plt.pause(1)
+
+	#plt.show()
 	
