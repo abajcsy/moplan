@@ -89,6 +89,14 @@ class Arm():
 
 		return np.array([t1, t2])
 
+	# returns ddtheta given torque M, C, tau, theta, dtheta
+	def fwd_dynamics():
+		
+	
+
+	# returns torque tau given M, C, theta, dtheta, ddtheta
+	def inv_dynamics():
+
 	# updates position of robot given current joint angles, velocities, etc. 
 	def update(self):
 		c2 = cos(self.theta2)
