@@ -59,6 +59,18 @@ class Arm():
 		self.beta = self.m2*self.l1*self.r2
 		self.delta = self.m2*self.r2**2
 	
+	# computes jacobian of end-effector given joint angles q = [q_0, q_1]
+	def Jee(self, q):
+		L1 = self.l1
+		L2 = self.l2
+		Jee = np.array([[-L1*sin(q[0])-L2*sin(q[0]+q[1]), -L2*sin(q[0]+q[1])], 
+						[L1*cos(q[0])+L2*cos(q[0]+q[1]), L2*cos(q[0]+q[1])], 
+						[0, 0], 
+						[0, 0], 
+						[0, 0], 
+						[1, 1]])
+		return Jee
+
 	# get forward kinematics of end-effector (end of link2)
 	def fwd_kin_ee(self):
 		x2 = self.l1*cos(self.theta1) + self.l2*cos(self.theta1 + self.theta2)
@@ -88,6 +100,20 @@ class Arm():
 		t2 = atan2(y, x) - atan2(self.l2*sin(self.theta2), self.l1+self.l2*cos(self.theta2))
 
 		return np.array([t1, t2])
+
+	# given joint configuration and joint angular velocity, 
+	# compute (x,y) velocities
+	def compute_xy_vel(self, q, qdot):
+		Jee = self.Jee(q)
+		xdot = np.dot(Jee, qdot)
+		return xdot
+
+	# given desired (x,y) forces and current configuration, get 
+	# torques needed to move the end-effector as desired (without inertia/gravity)
+	def compute_torques(self, q, Fx):
+		Jee = self.Jee(q)
+		Fq = np.dot(Jee.transpose(), Fx)
+		return Fq
 
 	# updates position of robot given current joint angles, velocities, etc. 
 	def update(self):
