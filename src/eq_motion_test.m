@@ -18,8 +18,8 @@ alpha = m1*l1.^2 + m2*(l1.^2 + l2.^2)
 beta = m2*l1*l2
 gamma = m2*l2.^2
 
-t1 = 1.5
-t2 = -1.9
+t1 = -1.6
+t2 = 1.8
 tau = [t1; t2]
 
 M = [alpha+2*beta*c2 gamma+beta*c2 ; gamma+beta*c2 gamma]
