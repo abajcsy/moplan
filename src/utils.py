@@ -8,6 +8,10 @@ from numpy.linalg import *
 import math
 from math import  *
 
+#-------------------------------------------------#
+#------------ MOTION MATRICES   -------------#
+#-------------------------------------------------#
+
 # updates inertial forces due to acceleration of joints 
 # M(theta) matrix based on current state information
 def compute_M(alpha, beta, delta, theta):
@@ -34,6 +38,10 @@ def compute_C(alpha, beta, delta, theta, dtheta):
 
 	return C
 
+#---------------------------------------#
+#------------ DYNAMICS --------------#
+#---------------------------------------#
+	
 # returns ddtheta given torque M, C, tau, dtheta
 def fwd_dynamics(M, C, tau, dtheta):
 	ddtheta = np.dot(inv(M), tau - np.dot(C,dtheta))
@@ -44,12 +52,40 @@ def inv_dynamics(M, C, dtheta, ddtheta):
 	tau = np.dot(M,ddtheta) + np.dot(C, dtheta)
 	return tau
 
-def get_line_traj((SX,SY), (GX,GY), num_waypoints):
+# given list of thetas, compute dtheta for each timestep
+def compute_dtheta(theta_list):
+	(m,n) = theta_list.shape
+	dtheta = np.zeros((m,n))
+	dtheta[0][0] = 0 	#TODO is this right for all cases?
+	dtheta[0][1] = 0
+
+	for i in range(1,m):
+		dtheta[i][0] = theta_list[i][0] - theta_list[i-1][0]
+		dtheta[i][1] = theta_list[i][1] - theta_list[i-1][1]
+	return dtheta		
+
+# given list of thetas, computes ddtheta for each timestep
+def compute_ddtheta(theta_list):
+	(m,n) = theta_list.shape
+	ddtheta = np.zeros((m,n))
+	ddtheta[0][0] = theta_list[1][0] 	#TODO is this right for all cases?
+	ddtheta[0][1] = theta_list[1][1]
+
+	for i in range(1,m-1):
+		ddtheta[i][0] = theta_list[i+1][0] - 2*theta_list[i][0] + theta_list[i-1][0]
+		ddtheta[i][1] = theta_list[i+1][1] - 2*theta_list[i][0] + theta_list[i-1][1]
+	return ddtheta		
+	
+#---------------------------------------#
+#--------- TRAJECTORIES ------------#
+#---------------------------------------#
+
+def get_line_traj(xy_start, xy_goal, num_waypoints):
 	traj = np.zeros((num_waypoints,2))
-	traj[0][0] = SX
-	traj[0][1] = SY
-	dist_x = GX-SX
-	dist_y = GY-SY
+	traj[0][0] = xy_start[0]
+	traj[0][1] = xy_start[1]
+	dist_x = xy_goal[0]-xy_start[0]
+	dist_y = xy_goal[1]-xy_start[1]
 
 	for i in range(1,num_waypoints):
 		traj[i][0] = traj[i-1][0] + dist_x/(num_waypoints-1)
@@ -112,26 +148,48 @@ def traj_ddtheta_d(arm, theta_d, dtheta_d, ddtheta_d, tau_d, num_waypoints):
 	print "ddtheta_d_verified:", ddtheta_d_verified
 	return ddtheta_d_verified
 	
-# given list of thetas, compute dtheta for each timestep
-def compute_dtheta(theta_list):
-	(m,n) = theta_list.shape
-	dtheta = np.zeros((m,n))
-	dtheta[0][0] = 0 	#TODO is this right for all cases?
-	dtheta[0][1] = 0
+	
+#---------------------------------------#
+#------------ PLOTTING --------------#
+#---------------------------------------#
+	
+def arm_plot(plt, arm, theta_d):
+	x1 = arm.l1*cos(theta_d[0])
+	y1 = arm.l1*sin(theta_d[0])
 
-	for i in range(1,m):
-		dtheta[i][0] = theta_list[i][0] - theta_list[i-1][0]
-		dtheta[i][1] = theta_list[i][1] - theta_list[i-1][1]
-	return dtheta		
+	x2 = x1 + arm.l2*cos(theta_d[0] + theta_d[1])
+	y2 = y1 + arm.l2*sin(theta_d[0] + theta_d[1])
 
-# given list of thetas, computes ddtheta for each timestep
-def compute_ddtheta(theta_list):
-	(m,n) = theta_list.shape
-	ddtheta = np.zeros((m,n))
-	ddtheta[0][0] = theta_list[1][0] 	#TODO is this right for all cases?
-	ddtheta[0][1] = theta_list[1][1]
+	plt.plot([0, x1], [0, y1], 'g', linewidth=5)
+	plt.plot([x1, x2], [y1, y2], 'b', linewidth=5)
 
-	for i in range(1,m-1):
-		ddtheta[i][0] = theta_list[i+1][0] - 2*theta_list[i][0] + theta_list[i-1][0]
-		ddtheta[i][1] = theta_list[i+1][1] - 2*theta_list[i][0] + theta_list[i-1][1]
-	return ddtheta		
+	# plot joints
+	plt.plot(0,0,'ko')
+	plt.plot(x1, y1, 'ko') 
+	plt.plot(x2, y2, 'ko')
+
+def tau_plot(plt, tau, t):
+	fig2 = plt.figure(figsize=(15, 8))
+	ax2 = fig2.add_subplot(111)
+	ax2.grid()
+	ax2.plot(t, tau_d[:,0], 'g', linewidth=2, label='Tau1')
+	ax2.plot(t, tau_d[:,1],'b', linewidth=2, label='Tau2')
+	
+	# add the legend with some customizations.
+	legend = ax2.legend(loc='upper right', shadow=True)
+	ax2.set_title('Torque Applied at Waypoints')
+	ax2.set_xlabel('Waypoint')
+	ax2.set_ylabel('Torque')
+	
+def val_plot(plt, dtheta, t):
+	fig3 = plt.figure(figsize=(15, 8))
+	ax3 = fig3.add_subplot(111)
+	ax3.grid()
+	ax3.plot(t, dtheta_d[:,0], 'g', linewidth=2, label='Elbow (link1)')
+	ax3.plot(t, dtheta_d[:,1],'b', linewidth=2, label='End-effector (link2)')
+	
+	# add the legend with some customizations.
+	legend = ax3.legend(loc='upper right', shadow=True)
+	ax3.set_title('Velocity of Arm at Waypoints')
+	ax3.set_xlabel('Waypoint')
+	ax3.set_ylabel('Velocity')

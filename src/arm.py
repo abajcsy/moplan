@@ -50,8 +50,8 @@ class Arm():
 		self.m2 = 0.5
 
 		# set starting configuration
-		self.theta[0] = 0
-		self.theta[1] = 0
+		self.theta[0] = 0.0
+		self.theta[1] = 0.0
 
 		# set (x,y) ee and elbow position 
 		self.ee[0] = self.l1*cos(self.theta[0])
@@ -107,3 +107,4 @@ class Arm():
 		config[1] = t2
 
 		return config
+		
