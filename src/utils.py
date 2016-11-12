@@ -112,6 +112,7 @@ def traj_ddtheta_d(arm, theta_d, dtheta_d, ddtheta_d, tau_d, num_waypoints):
 	print "ddtheta_d_verified:", ddtheta_d_verified
 	return ddtheta_d_verified
 
+	
 # given list of thetas, compute dtheta for each timestep
 def compute_dtheta(theta_list):
 	(m,n) = theta_list.shape
