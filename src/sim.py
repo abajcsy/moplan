@@ -89,7 +89,6 @@ if __name__ == "__main__":
 	ax2.set_title('Torque Applied at Waypoints')
 	ax2.set_xlabel('Waypoint')
 	ax2.set_ylabel('Torque')
-
 	
 	# plot velocities over time 
 	fig3 = plt.figure(figsize=(15, 8))
