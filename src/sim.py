@@ -58,8 +58,8 @@ class Arm():
 		self.m2 = 0.5
 
 		# set starting configuration
-		self.theta[0] = pi/8
-		self.theta[1] = pi/8
+		self.theta[0] = 0
+		self.theta[1] = 0
 
 		# set (x,y) ee and elbow position 
 		self.ee[0] = self.l1*cos(self.theta[0])
@@ -94,12 +94,10 @@ class Arm():
 		x = pos[0]
 		y = pos[1]
 
-		num = x**2+y**2-self.l1**2-self.l2**2
-		denom = 2*self.l1*self.l2
-		s = 1-(num/denom)**2
-
+		c2 = (x**2+y**2-self.l1**2-self.l2**2)/(2*self.l1*self.l2)
+	
 		try: 
-			b = sqrt(s)
+			s2 = sqrt(1 - c2**2)
 		except:
 			print "\n--------------------------------"
 			print "WARNING: TRAJECTORY POINT ", (x,y) 
@@ -107,12 +105,11 @@ class Arm():
 			print "--------------------------------\n"
 			return None
 
-		a = num/denom
-
-		t1 = atan2(b, a)
-		#t1_prime = atan2(-b, a)		
-		t2 = atan2(y, x) - atan2(self.l2*sin(self.theta[1]), self.l1+self.l2*cos(self.theta[1]))
-
+		t2 = atan2(s2, c2)
+		k1 = self.l1 + self.l2*c2
+		k2 = self.l2*s2
+		t1 = atan2(y,x) - atan2(k2, k1)
+		
 		config = np.zeros((2,1))
 		config[0] = t1
 		config[1] = t2
@@ -184,23 +181,6 @@ def traj_to_cspace(traj, arm):
 
 	return q_traj
 
-def plot_arm(fig, arm, traj):
-
-	plt.clf()
-	ax = fig.add_subplot(111, aspect='equal', autoscale_on=False, xlim=(-2, 2), ylim=(-2, 2))
-	ax.grid()
-	
-	plt.plot([0, arm.x1], [0, arm.y1], 'b', linewidth=5)
-	plt.plot([arm.x1, arm.x2], [arm.y1, arm.y2], 'b', linewidth=5)
-	
-	# plot joints
-	plt.plot(0,0,'ko')
-	plt.plot(arm.x1, arm.y1, 'ko') 
-	plt.plot(arm.x2, arm.y2, 'ko')
-	
-	# plot trajectory waypoints
-	plt.plot(traj[0],traj[1],'ro')
-
 # given list of thetas, compute dtheta for each timestep
 def compute_dtheta(theta_list):
 	(m,n) = theta_list.shape
@@ -250,8 +230,8 @@ if __name__ == "__main__":
 	# start/end for trajectory
 	arm_pos = arm.fwd_kin_ee()
 	SX = arm_pos[0]; SY = arm_pos[1]
-	GX = -1.0; GY = 1.5
-	num_waypoints = 10
+	GX = 0.0; GY = 1.5
+	num_waypoints = 5
 	
 	# get trajectory in world coordinates (x,y) for plotting
 	xy_traj = get_line_traj((SX,SY), (GX,GY), num_waypoints)
@@ -326,7 +306,5 @@ if __name__ == "__main__":
 		plt.plot(x2, y2, 'ko')
 		plt.plot(xy_traj[:,0],xy_traj[:,1],'ro')
 
-		plt.pause(1)
-
-	#plt.show()
+		plt.pause(0.01)
 	
