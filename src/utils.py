@@ -147,7 +147,20 @@ def traj_ddtheta_d(arm, theta_d, dtheta_d, ddtheta_d, tau_d, num_waypoints):
 
 	print "ddtheta_d_verified:", ddtheta_d_verified
 	return ddtheta_d_verified
+
+#---------------------------------------#
+#------ HUMAN INTERACTION  ------#
+#---------------------------------------#	
+
+
+def compute_tau_H(arm, tau_a, tau_d, theta_a, dtheta_a, ddtheta_a):
+	M = compute_M(arm.alpha, arm.beta, arm.delta, theta_a)
+	C = compute_C(arm.alpha, arm.beta, arm.delta, theta_a, dtheta_a)
 	
+	tau = inv_dynamics(M, C, dtheta_a, ddtheta_a)
+	tau_H = tau - tau_a
+	# or can I just do tau_actual - tau_demo to get the tau_human?
+	return tau_H
 	
 #---------------------------------------#
 #------------ PLOTTING --------------#
@@ -168,7 +181,7 @@ def arm_plot(plt, arm, theta_d):
 	plt.plot(x1, y1, 'ko') 
 	plt.plot(x2, y2, 'ko')
 
-def tau_plot(plt, tau, t):
+def tau_plot(plt, tau_d, t):
 	fig2 = plt.figure(figsize=(15, 8))
 	ax2 = fig2.add_subplot(111)
 	ax2.grid()
@@ -181,7 +194,7 @@ def tau_plot(plt, tau, t):
 	ax2.set_xlabel('Waypoint')
 	ax2.set_ylabel('Torque')
 	
-def val_plot(plt, dtheta, t):
+def vel_plot(plt, dtheta_d, t):
 	fig3 = plt.figure(figsize=(15, 8))
 	ax3 = fig3.add_subplot(111)
 	ax3.grid()

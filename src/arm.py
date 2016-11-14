@@ -10,7 +10,7 @@ from math import  *
 
 import utils
 
-class Arm():
+class TwoLinkArm():
 	# Constants
 	l1 = 0 			# link 1 length 
 	l2 = 0 			# link 2 length
