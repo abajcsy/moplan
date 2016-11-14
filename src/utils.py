@@ -53,27 +53,27 @@ def inv_dynamics(M, C, dtheta, ddtheta):
 	return tau
 
 # given list of thetas, compute dtheta for each timestep
-def compute_dtheta(theta_list):
+def compute_dtheta(theta_list, delta_t):
 	(m,n) = theta_list.shape
 	dtheta = np.zeros((m,n))
 	dtheta[0][0] = 0 	#TODO is this right for all cases?
 	dtheta[0][1] = 0
 
 	for i in range(1,m):
-		dtheta[i][0] = theta_list[i][0] - theta_list[i-1][0]
-		dtheta[i][1] = theta_list[i][1] - theta_list[i-1][1]
+		dtheta[i][0] = (theta_list[i][0] - theta_list[i-1][0])/delta_t
+		dtheta[i][1] = (theta_list[i][1] - theta_list[i-1][1])/delta_t
 	return dtheta		
 
 # given list of thetas, computes ddtheta for each timestep
-def compute_ddtheta(theta_list):
+def compute_ddtheta(theta_list, delta_t):
 	(m,n) = theta_list.shape
 	ddtheta = np.zeros((m,n))
 	ddtheta[0][0] = theta_list[1][0] 	#TODO is this right for all cases?
 	ddtheta[0][1] = theta_list[1][1]
 
 	for i in range(1,m-1):
-		ddtheta[i][0] = theta_list[i+1][0] - 2*theta_list[i][0] + theta_list[i-1][0]
-		ddtheta[i][1] = theta_list[i+1][1] - 2*theta_list[i][0] + theta_list[i-1][1]
+		ddtheta[i][0] = (theta_list[i+1][0] - 2*theta_list[i][0] + theta_list[i-1][0])/delta_t
+		ddtheta[i][1] = (theta_list[i+1][1] - 2*theta_list[i][0] + theta_list[i-1][1])/delta_t
 	return ddtheta		
 	
 #---------------------------------------#
@@ -165,21 +165,6 @@ def compute_tau_H(arm, tau_a, tau_d, theta_a, dtheta_a, ddtheta_a):
 #---------------------------------------#
 #------------ PLOTTING --------------#
 #---------------------------------------#
-	
-def arm_plot(plt, arm, theta_d):
-	x1 = arm.l1*cos(theta_d[0])
-	y1 = arm.l1*sin(theta_d[0])
-
-	x2 = x1 + arm.l2*cos(theta_d[0] + theta_d[1])
-	y2 = y1 + arm.l2*sin(theta_d[0] + theta_d[1])
-
-	plt.plot([0, x1], [0, y1], 'g', linewidth=5)
-	plt.plot([x1, x2], [y1, y2], 'b', linewidth=5)
-
-	# plot joints
-	plt.plot(0,0,'ko')
-	plt.plot(x1, y1, 'ko') 
-	plt.plot(x2, y2, 'ko')
 
 def tau_plot(plt, tau_d, t):
 	fig2 = plt.figure(figsize=(15, 8))
@@ -194,15 +179,32 @@ def tau_plot(plt, tau_d, t):
 	ax2.set_xlabel('Waypoint')
 	ax2.set_ylabel('Torque')
 	
-def vel_plot(plt, dtheta_d, t):
+def vel_plot(plt, dtheta_d, dtheta_actual, t):
 	fig3 = plt.figure(figsize=(15, 8))
 	ax3 = fig3.add_subplot(111)
 	ax3.grid()
-	ax3.plot(t, dtheta_d[:,0], 'g', linewidth=2, label='Elbow (link1)')
-	ax3.plot(t, dtheta_d[:,1],'b', linewidth=2, label='End-effector (link2)')
+	ax3.plot(t, dtheta_d[:,0], 'g', linewidth=2, label='Computed Elbow (link1)')
+	ax3.plot(t, dtheta_d[:,1],'b', linewidth=2, label='Computed End-effector (link2)')
+	ax3.plot(t, dtheta_actual[:,0], 'r', linewidth=2, label='Actual Elbow (link1)')
+	ax3.plot(t, dtheta_actual[:,1],'k', linewidth=2, label='Actual End-effector (link2)')
 	
 	# add the legend with some customizations.
 	legend = ax3.legend(loc='upper right', shadow=True)
 	ax3.set_title('Velocity of Arm at Waypoints')
 	ax3.set_xlabel('Waypoint')
 	ax3.set_ylabel('Velocity')
+	
+def state_plot(plt, theta_d, theta_actual, t):
+	fig3 = plt.figure(figsize=(15, 8))
+	ax3 = fig3.add_subplot(111)
+	ax3.grid()
+	ax3.plot(t, theta_d[:,0], 'g', linewidth=2, label='Computed Elbow (link1)')
+	ax3.plot(t, theta_d[:,1],'b', linewidth=2, label='Computed End-effector (link2)')
+	ax3.plot(t, theta_actual[:,0], 'r', linewidth=2, label='Actual Elbow (link1)')
+	ax3.plot(t, theta_actual[:,1],'k', linewidth=2, label='Actual End-effector (link2)')
+	
+	# add the legend with some customizations.
+	legend = ax3.legend(loc='upper right', shadow=True)
+	ax3.set_title('Position of Arm at Waypoints')
+	ax3.set_xlabel('Waypoint')
+	ax3.set_ylabel('Position')

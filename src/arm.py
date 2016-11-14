@@ -52,6 +52,9 @@ class TwoLinkArm():
 		# set starting configuration
 		self.theta[0] = 0.0
 		self.theta[1] = 0.0
+		# set dtheta as default 0 to begin with
+		self.dtheta[0] = 0.0
+		self.dtheta[1] = 0.0
 
 		# set (x,y) ee and elbow position 
 		self.ee[0] = self.l1*cos(self.theta[0])
@@ -107,4 +110,16 @@ class TwoLinkArm():
 		config[1] = t2
 
 		return config
+		
+	def plot(self, plt):
+		ee = self.fwd_kin_ee()
+		elbow = self.fwd_kin_elbow()
+		
+		plt.plot([0, elbow[0]], [0, elbow[1]], 'g', linewidth=5)
+		plt.plot([elbow[0], ee[0]], [elbow[1], ee[1]], 'b', linewidth=5)
+
+		# plot joints
+		plt.plot(0,0,'ko')
+		plt.plot(elbow[0], elbow[1], 'ko') 
+		plt.plot(ee[0], ee[1], 'ko')
 		
