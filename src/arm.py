@@ -12,10 +12,10 @@ import utils
 
 class TwoLinkArm():
 	# Constants
-	l1 = 0 			# link 1 length 
-	l2 = 0 			# link 2 length
-	m1 = 0 			# link 1 mass 
-	m2 = 0 			# link 2 mass
+	l1 = 1.0 			# link 1 length 
+	l2 = 1.0 			# link 2 length
+	m1 = 1.0 			# link 1 mass 
+	m2 = 1.0 			# link 2 mass
 
 	#r1 = 1.0 		# distance from first joint to center of mass for link 1
 	#r2 = 1.0 	 	# distance from second joint to center of mass for link 2

@@ -16,11 +16,111 @@ import arm
 import utils
 from utils import *
 
+import time
+import controller
+import planner
+
 # --------------------------------------------------#
 # Runs 2D simulation of a 2-link arm in a plane 
 # Add forces to arm by clicking on the plot near 
 # the joint you want to affect. 
 #--------------------------------------------------#
+
+def PID_control(controller, target_pos, pos):
+	"""
+	Return a control torque based on PID control
+	"""
+	error = (target_pos - pos)
+
+	return -controller.update_PID(error)
+
+def update_target_pos(curr_pos, planner):
+	"""
+	Takes the current position of the robot. Determines what the next
+	target position to move to should be depending on:
+	- if robot is moving to start of desired trajectory or 
+	- if robot is moving along the desired trajectory 
+	"""
+	delta_t = 0.05;
+	(T, target_pos) = planner.linear_path(delta_t, curr_pos)
+	return target_pos
+
+def pid_sim(xy_start, xy_goal):
+	num_waypoints = 20
+
+	# initialize default arm 
+	arm2 = arm.TwoLinkArm()
+
+	# set the starting configuration to start of trajectory 
+	theta_start = arm2.inv_kin_ee(xy_start)
+	arm2.theta = theta_start
+	
+	# get trajectory in world coordinates (x,y) for plotting
+	xy_traj = get_line_traj(xy_start, xy_goal, num_waypoints)
+
+	dim = 2 # 2-dimensional system for 2 link arm
+	alpha = 1.0
+
+	# set up the control input command
+	torque = np.eye(dim) 
+
+	# set up the path planner
+	planner = planner.PathPlanner(theta_start[0][0], theta_start[1][0], alpha)
+
+	# set up the controller
+	p_gain = 1.0;
+	i_gain = 1.0;
+	d_gain = 1.0;
+	P = p_gain*np.eye(dim)
+	I = i_gain*np.eye(dim)
+	D = d_gain*np.eye(dim)
+	controller = pid.PID(P,I,D,0,0,dim)
+
+	# keep track of starting time of trajectory execution
+	path_start_T = time.time() 
+
+	while(true):	
+		curr_pos = arm.theta
+		target_pos = update_target_pos(curr_pos, planner)
+
+		torque = PID_control(controller, target_pos, curr_pos)
+
+		# set arm's current torque to the computed torque we need
+		arm2.tau[0] = torque[0][0]
+		arm2.tau[1] = torque[1][0]
+		
+		# update velocity and position 
+		arm2.dtheta[0] = controller.d_error()[0][0] #TODO THIS IS WRONG!
+		arm2.dtheta[1] = controller.d_error()[1][0]
+		
+		arm2.theta[0] = theta1_new
+		arm2.theta[1] = theta2_new
+		
+		ee_pos = arm2.fwd_kin_ee()
+		
+		plt.clf()
+		# plot the end-effector position 
+		ax = fig.add_subplot(111, aspect='equal', autoscale_on=False, xlim=(-2, 2), ylim=(-2, 2))
+		ax.grid()
+		ax.text(.05, .05, 'TRAJ ee(x,y): ('+str(round(xy_traj[t][0],3))+','+str(round(xy_traj[t][1],3))+')', 
+				horizontalalignment='left',
+				verticalalignment='bottom',
+				transform=ax.transAxes, 
+				fontsize=15)
+		ax.text(.05, .0, 'ACTUAL ee(x,y): ('+str(round(ee_pos[0],3))+','+str(round(ee_pos[0],3))+')', 
+				horizontalalignment='left',
+				verticalalignment='bottom',
+				transform=ax.transAxes, 
+				fontsize=15)
+				
+		#plot the arm 
+		arm2.plot(plt)
+		# plot trajectory 
+		plt.plot(xy_traj[:,0],xy_traj[:,1],'ro')
+		
+		plt.pause(0.01)
+
+
 
 # Simulate basic straight-line trajectory following and
 # torque computations

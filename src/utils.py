@@ -77,7 +77,7 @@ def compute_ddtheta(theta_list, delta_t):
 	return ddtheta		
 	
 #---------------------------------------#
-#--------- TRAJECTORIES ------------#
+#----------- TRAJECTORIES --------------#
 #---------------------------------------#
 
 def get_line_traj(xy_start, xy_goal, num_waypoints):
