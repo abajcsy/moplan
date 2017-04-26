@@ -7,42 +7,36 @@ from arm2base import Arm2Base
 import control
 from control import PID
 
+import sys
+
+RAND = "-r"
+LINEAR = "-l"
+INFERENCE = "-i"
+FORCE = "-f"
+
 class Simulator(object):
 
     def __init__(self, title='', dt=1e-3, control_steps=1, 
-                display_steps=1, t_target=1.0):
+                    display_steps=1, t_target=1.0, sim_type=RAND):
         self.dt = dt
         self.control_steps = control_steps
         self.display_steps = display_steps
         self.target_steps = int(t_target/float(dt*display_steps))
 
         self.title = title
-
         self.sim_step = 0
+        self.sim_type = sim_type
+        print "sim_type: " + str(self.sim_type)
 
         self.tau = None
-
-    def plot_goal_q(self, target_xy, target_q):
-         # plot target end-effector pos (xy)
-        self.goal = self.ax.plot(target_xy[0],target_xy[1],'ko')
-        
-        # plot target configuration
-        target_pos = arm.position(target_q)
-        plt.plot([target_pos[0][0], target_pos[0][1]], [target_pos[1][0], target_pos[1][1]], 'g', linewidth=5)
-        plt.plot([target_pos[0][1], target_pos[0][2]], [target_pos[1][1], target_pos[1][2]], 'g', linewidth=5)
-        # plot joints
-        plt.plot(target_pos[0][0], target_pos[1][0],'ko')
-        plt.plot(target_pos[0][1], target_pos[1][1], 'ko') 
-        plt.plot(target_pos[0][2], target_pos[1][2], 'ko')
 
     def run(self, arm, control, target_xy, target_q):
         self.end_time = None
 
         self.controller = control
         self.arm = arm
-        #box = [-.5, .5, -.25, .75]
-        box = [-.6, .6, -.6, .6]
-        
+        box = [-.5, .5, -.25, .75]
+        #box = [-.6, .6, -.6, .6]
 
         fig = plt.figure(figsize=(5.1,5.1), dpi=None)
         fig.suptitle(self.title); 
@@ -58,9 +52,6 @@ class Simulator(object):
         self.ax.yaxis.grid()
         # make it a square plot
         self.ax.set_aspect(1) 
-
-        # plot the arm's goal config
-        #self.plot_goal_q(ax, target_xy, target_q)
 
         self.target_arm_line, = self.ax.plot([], [], 'o-', mew=4, color='b', lw=5, alpha=0.3)
         self.arm_line, = self.ax.plot([], [], 'o-', mew=4, color='b', lw=5)
@@ -90,26 +81,39 @@ class Simulator(object):
         return '\n'.join(text)    
 
     def anim_animate(self, i):
-
         # get target from controller
-        #self.target = self.controller.target
+        if self.sim_type == LINEAR:
+            self.target = self.controller.line_target(self.arm, self.arm.t+0.1)
+            #self.target = self.controller.line_target(self.arm, self.dt*10)
+            #self.target = self.controller.goal
+        elif self.sim_type == RAND:
+            # update target after specified period of time passes
+            if self.sim_step % (self.target_steps*self.display_steps) == 0:
+                self.target = self.controller.rand_target(self.arm)
+        elif self.sim_type == FORCE:
+            self.target = self.controller.goal
 
-        # update target after specified period of time passes
-        if self.sim_step % (self.target_steps*self.display_steps) == 0:
-            self.target = self.controller.gen_target(self.arm)
-       
         # before drawing
         for j in range(self.display_steps):            
             # update control signal
             if (self.sim_step % self.control_steps) == 0 or self.tau is None:
                 self.tau = self.controller.control(self.arm, self.dt)
             # apply control signal and simulate
+            if self.sim_type == FORCE:
+                fEE = np.array([10, 10])
+                self.Fq = self.arm.gen_Fq(forceEE=fEE)
+                print "tau (before) Fq: " + str(self.tau)
+                self.tau += self.Fq
+                print "tau (after) Fq: " + str(self.tau)
+
             self.arm.apply_torque(u=self.tau, dt=self.dt)
-    
             self.sim_step += 1
 
-        # update figure
-        self.target_arm_line.set_data(*self.arm.position(self.target))
+        # update figure depending on what control we are running
+        self.target_arm_line.set_data(*self.arm.position(self.controller.target))
+        if self.sim_type == LINEAR or self.sim_type == FORCE:
+            self.target_arm_line.set_data(*self.arm.position(self.controller.goal))
+
         self.arm_line.set_data(*self.arm.position())
         self.info.set_text(self.make_info_text())
             
@@ -134,18 +138,20 @@ if __name__ == '__main__':
     arm = arm2base.Arm2Base(init_q, init_dq, l1, l2, dt)
 
     # setup target position
-    target_xy = np.array([0.1, 0.5])
+    target_xy = np.array([-0.4, 0.0])
     target_q = arm.inv_kinematics(target_xy)  
     
     print "target_xy: " + str(target_xy)
     print "target_q: " + str(target_q)
 
     # setup controller
-    kp = 250; ki = 0.0; kd = 8.0
+    kp = 300; ki = 0.0; kd = 20
     print "kp: " + str(kp) + ", ki: " + str(ki) + ", kd: " + str(kd)
-    controller = control.PID(kp, ki, kd, target_q)
+    start_q = arm.q
+    controller = control.PID(kp, ki, kd, target_q, start_q)
 
     # start simulator
-    sim = Simulator()
+    sim_flag = sys.argv[1]
+    sim = Simulator(sim_type=sim_flag)
     sim.run(arm, controller, target_xy, target_q)
     sim.show()

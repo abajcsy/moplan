@@ -1,6 +1,8 @@
 import numpy as np
+import numpy.linalg
+from numpy.linalg import *
 
-class Planner(object):
+class PathPlanner(object):
 	
 	def __init__(self, theta_s, theta_g, alpha):	
 		self.s = theta_s
@@ -19,8 +21,8 @@ class Planner(object):
 		theta = (self.g-self.s)*(1/self.t_f)*t + self.s
 
 		print "alpha: " + str(self.alpha)
-		print "total t: " + str(self.total_t)
-		print "t_f: " + str(t_f)
+		#print "total t: " + str(self.total_t)
+		print "t_f: " + str(self.t_f)
 
 		# if time after the final time, then just go to goal
 		if t > self.t_f:

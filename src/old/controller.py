@@ -1,5 +1,7 @@
 import numpy as np
 from numpy import linalg
+import time
+import math
 
 class Controller(object):
 
@@ -14,10 +16,10 @@ class Controller(object):
           d_gain     The derivative gain.
           i_min      The integral lower limit. 
           i_max      The integral upper limit.
-        """
+        """		
+        self.dim = dim
         self.set_gains(p_gain, i_gain, d_gain, i_min, i_max)
         self.reset()
-        self.dim = dim;
 
     def reset(self):
         """  Reset the state of this PID controller """

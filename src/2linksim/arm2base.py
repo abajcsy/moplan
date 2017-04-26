@@ -118,6 +118,24 @@ class Arm2Base(ArmBase):
 
         return Mq
 
+    def gen_Fq(self, forceEE=None):
+        """
+        Generates the forces at each joint from a force at the end-effector.
+        Fq = jacEE.T(q)*Fx
+        """
+        Fx = np.array([0.0, 0.0]) if forceEE is None else forceEE
+ 
+        print "Fx: " + str(Fx)
+        JEE = self.gen_jacEE()
+        print "JEE: " + str(JEE)
+        print "JEE.T: " + str(JEE.T)
+        Fq = np.dot(JEE.T,Fx)
+
+        print "Fq: " + str(Fq)
+
+        return Fq
+        
+
     def inv_kinematics(self, xy):
         """
         Calculate the joint angles for a given (x,y) hand position
