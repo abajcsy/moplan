@@ -4,7 +4,7 @@ class PID(object):
     """
     The base class for PID controller.
     """
-    def __init__(self, kp, ki, kd, target, start, goal=None):
+    def __init__(self, kp, ki, kd, target, start, grav_comp, goal=None):
         """
         kp float: the position error term gain value
         kv float: the velocity error term gain value
@@ -18,6 +18,9 @@ class PID(object):
         self.target = target
         self.start = start
 
+        # checks if should publish gravity term in all control
+        self.grav_comp = grav_comp
+
         if goal is None:
             self.goal = self.target
         else:
@@ -25,6 +28,7 @@ class PID(object):
 
         self.reached_goal = False
         self.p_error_last = None
+        self.i_error = np.array([[0.0, 0.0]])
 
         # generalized coordinates
         self.target_gain = 2*np.pi
@@ -60,28 +64,33 @@ class PID(object):
             # if a desired location is specified on input
             p_error = q_des - arm.q
 
-        #print "perror: " + str(p_error)
-
         if self.p_error_last is None:
             self.p_error_last = np.array([0.0, 0.0])
             
         # p-error
         p = self.kp * p_error
-    
+
+        # i-error
+        self.i_error += p_error * dt 
+        i = self.ki * self.i_error
+
         # d-error
         d_error = (p_error - self.p_error_last) / dt
         self.p_error_last = p_error
-        #d_error = -arm.dq        
         d = self.kd * d_error
 
-        # TODO integral term is always zero 
-        self.u = (p + d).reshape(-1,)
+        # compute total command to send
+        self.u = (p + i + d).reshape(-1,)
 
-        # TODO TEST
+        # adds gravity compensation term if flag is set to true
+        if self.grav_comp:
+            Gq = arm.gen_Gq()
+            self.u += Gq
+
         #q_des = (self.kp * p_error + self.kd * -arm.dq).reshape(-1,)
         #Mq = arm.gen_Mq()
-        # tau = Mq * q_des + tau_grav, but gravity = 0
-        #self.u = np.dot(Mq, q_des).reshape(-1,)
+        # tau = Mq * q_des + tau_grav
+        #self.u = (np.dot(Mq, q_des) + Gq).reshape(-1,)
 
         return self.u
 

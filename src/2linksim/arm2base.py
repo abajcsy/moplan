@@ -56,6 +56,9 @@ class Arm2Base(ArmBase):
         self.K3 = self.m2 * self.l2**2.0
         self.K4 = self.m2 * self.l1 * self.l2
 
+        # force at end-effecor
+        self.fEE = np.array([0.0, 0.0])
+
     def gen_jacCOM1(self, q=None):
         """
         Generates the Jacobian from the COM of the first
@@ -118,23 +121,37 @@ class Arm2Base(ArmBase):
 
         return Mq
 
+    def gen_Gq(self, q=None):
+        """
+        Generates the gravity matrix for the arm in joint space
+        """
+        q = self.q if q is None else q
+
+        C1 = np.cos(self.q[0])
+        C12 = np.cos(self.q[0] + self.q[1])
+        g = -9.8
+        G1 = (self.m1 + self.m2)*g*self.l1*C1 + self.m2*g*self.l2*C12
+        G2 = self.m2*g*self.l2*C12
+        
+        return np.array([G1, G2])
+
     def gen_Fq(self, forceEE=None):
         """
         Generates the forces at each joint from a force at the end-effector.
         Fq = jacEE.T(q)*Fx
         """
-        Fx = np.array([0.0, 0.0]) if forceEE is None else forceEE
+        Fx = self.fEE if forceEE is None else forceEE
  
-        print "Fx: " + str(Fx)
+        #print "Fx: " + str(Fx)
         JEE = self.gen_jacEE()
-        print "JEE: " + str(JEE)
-        print "JEE.T: " + str(JEE.T)
+        #print "JEE: " + str(JEE)
+        #print "JEE.T: " + str(JEE.T)
+        # TODO CHECK THAT COORDINATES ARE BEING MULTIPLIED RIGHT
         Fq = np.dot(JEE.T,Fx)
 
-        print "Fq: " + str(Fq)
+        #print "Fq: " + str(Fq)
 
         return Fq
-        
 
     def inv_kinematics(self, xy):
         """
@@ -209,12 +226,17 @@ class Arm2Base(ArmBase):
         G1 = (self.m1 + self.m2)*g*self.l1*C1 + self.m2*g*self.l2*C12
         G2 = self.m2*g*self.l2*C12
 
-        ddq1 = (M11*u[1] - M21*u[0] + M21*V1 + M21*G1 - M11*V2 - M11*G2) / (M11*M22 - M12**2.0)
+        # computation without gravity terms
+        #ddq1 = (M11*u[1] - M21*u[0] + M21*V1 - M11*V2) / (M11*M22 - M12**2.0)
+        #ddq0 = (u[0] - M12*ddq1 - V1 ) / M11
+
+        # computation WITH gravity terms
+        #ddq1 = (M11*u[1] - M21*u[0] + M21*V1 + M21*G1 - M11*V2 - M11*G2) / (M11*M22 - M12**2.0)
+        ddq1 = (M12*u[0] - M12*V1 - M12*G1 + M11*(V2 + G2 - u[1])) / (M12**2.0 - M22*M11)        
         ddq0 = (u[0] - M12*ddq1 - V1 - G1) / M11
 
-        #ddq1 = ((V2*M11 - V1*M21 - M11*u[1] + M21*u[0]) / (M12**2.0 - M11*M22))
-        #ddq0 = (-V2 + u[1] - M22*ddq1) / M21
         """
+        print "u: " + str(u)
         print "Old state:"
         print "q: " + str(self.q)
         print "dq: " + str(self.dq)
@@ -225,10 +247,11 @@ class Arm2Base(ArmBase):
 
         # transfer to next time step
         self.t += dt
-        """    
+        """
         print "New state after torque:"
         print "q: " + str(self.q)
         print "dq: " + str(self.dq)
+        print "ddq: [" + str(ddq0) + ", " + str(ddq1) + "]"
         print "t: " + str(self.t)
         """
 
