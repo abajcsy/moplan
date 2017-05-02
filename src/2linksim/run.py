@@ -57,6 +57,10 @@ class Simulator(object):
         # make it a square plot
         self.ax.set_aspect(1) 
 
+        if self.sim_type == LINEAR:
+            X, Y = self.controller.draw_lintraj(self.arm)
+            self.traj, = self.ax.plot(X, Y, 'o', color='r', lw=1, alpha=0.5)
+
         self.force_vector = self.ax.quiver(0, 0, 0, 0, angles='xy', scale_units='xy', scale=1, color='r')
 
         #self.force_vector, = self.ax.plot([], [], '-', mew=4, color='r', lw=5)
@@ -66,7 +70,7 @@ class Simulator(object):
                             box[3]-abs(.1*box[3]), \
                             '', va='top', fontsize=13)
 
-        if self.sim_type == FORCE:
+        if self.sim_type == FORCE or self.sim_type == LINEAR:
             print "\nEnter <x-dir force> <y-dir force> to apply a force at the end-effector:"
 
         anim = animation.FuncAnimation(fig, self.anim_animate, 
@@ -88,7 +92,7 @@ class Simulator(object):
         q_text = ' '.join('%4.3f,'%F for F in self.arm.q)
         text.append('$\mathregular{q = ['+q_text+']}$')
         u_text = ' '.join('%4.3f,'%F for F in self.controller.u)
-        text.append('$\mathregular{u = ['+u_text+']}$')
+        text.append('$\mathregular{u^{PID} = ['+u_text+']}$')
         Fq = self.arm.gen_Fq(forceEE=self.arm.fEE)
         uH_text = ' '.join('%4.3f,'%F for F in Fq)
         text.append('$\mathregular{u^{H} = ['+uH_text+']}$')
@@ -104,10 +108,20 @@ class Simulator(object):
                 fin = map(float, splt)
                 self.arm.fEE = np.array(fin)
                 print "Force applied: " + str(self.arm.fEE)
+                f = self.arm.gen_Fq()
+                q = self.arm.q
+                normf = np.linalg.norm(f)
+                normq = np.linalg.norm(q)
+                direction  = np.dot(f, q)
+                #print "Magnitude: " + str(np.linalg.norm(f))
+                print "Direction: " + str(direction) 
+
+        # if user entered a force at EE, apply it to torque
+        self.Fq = self.arm.gen_Fq(forceEE=self.arm.fEE)
 
         # get target from controller
         if self.sim_type == LINEAR:
-            self.target = self.controller.line_target(self.arm, self.arm.t+0.1)
+            self.target = self.controller.line_target(self.arm, self.arm.t, self.Fq)
             #self.target = self.controller.line_target(self.arm, self.dt*10)
             #self.target = self.controller.goal
         elif self.sim_type == RAND:
@@ -122,11 +136,8 @@ class Simulator(object):
             # update control signal
             if (self.sim_step % self.control_steps) == 0 or self.tau is None:
                 self.tau = self.controller.control(self.arm, self.dt)
-            # apply control signal and simulate
-            if self.sim_type == FORCE or self.sim_type == RAND:
-                self.Fq = self.arm.gen_Fq(forceEE=self.arm.fEE)
-                self.tau += self.Fq
-              
+            self.tau += self.Fq
+            # apply total torque to robot
             self.arm.apply_torque(u=self.tau, dt=self.dt)
             self.sim_step += 1
 
@@ -135,15 +146,12 @@ class Simulator(object):
         if self.sim_type == LINEAR or self.sim_type == FORCE:
             self.target_arm_line.set_data(*self.arm.position(self.controller.goal))
         
+        # update figure
         pos = self.arm.position()
         X = pos[0][2]
         Y = pos[1][2]
-
         U = (self.arm.fEE[0]+X)/100
         V = (self.arm.fEE[1]+Y)/100
-        #div = np.linalg.norm([U, V])
-        #U /= div*10
-        #V /= div*10 # scaling is just for visualization 
             
         # set (x,y) origin of force vector and vector direction (u,v)
         self.force_vector.set_offsets([X, Y])
@@ -163,8 +171,8 @@ class Simulator(object):
 
 if __name__ == '__main__':
 
-    init_q = [0.75613, 1.8553]
-    init_dq = [0.0,0.0]
+    init_q = [0.75613, 1.8553] 
+    init_dq = [0.5,0.5]
     l1 = 0.31
     l2 = 0.27
     dt = 1e-3
@@ -173,14 +181,14 @@ if __name__ == '__main__':
     arm = arm2base.Arm2Base(init_q, init_dq, l1, l2, dt)
 
     # setup target position
-    target_xy = np.array([-0.4, 0.0])
+    target_xy = np.array([-0.4, -0.1])
     target_q = arm.inv_kinematics(target_xy)  
     
     print "target_xy: " + str(target_xy)
     print "target_q: " + str(target_q)
 
     # setup controller
-    kp = 10; ki = 0; kd = np.sqrt(10)
+    kp = 60; ki = 0; kd = 10
     print "kp: " + str(kp) + ", ki: " + str(ki) + ", kd: " + str(kd)
 
     start_q = arm.q
@@ -190,6 +198,6 @@ if __name__ == '__main__':
     # start simulator
     sim_flag = sys.argv[1]
     iactive = True
-    sim = Simulator(sim_type=sim_flag)
+    sim = Simulator(dt=dt, sim_type=sim_flag)
     sim.run(arm, controller, target_xy, target_q)
     sim.show()

@@ -16,7 +16,7 @@ class PID(object):
         self.ki = ki
         self.kd = kd
         self.target = target
-        self.start = start
+        self.start = np.copy(start)
 
         # checks if should publish gravity term in all control
         self.grav_comp = grav_comp
@@ -25,6 +25,9 @@ class PID(object):
             self.goal = self.target
         else:
             self.goal = goal
+    
+        self.alpha = 1.0
+        self.Tf = self.alpha*(np.linalg.norm(self.start-self.goal))
 
         self.reached_goal = False
         self.p_error_last = None
@@ -38,14 +41,14 @@ class PID(object):
         """Checks the distance to target"""
         return np.sum(abs(arm.q - self.target)) 
 
-    def is_at_goal(self, arm, epsilon=0.01):
+    def is_at_goal(self, arm, epsilon=0.1):
         """Checks the if arm is within epsilon of dist to final goal"""
         dist_from_goal = np.fabs(arm.q - self.goal)
-        print "dist: " + str(dist_from_goal)
+        #print "dist: " + str(dist_from_goal)
 
         # check if every joint is close enough to goal configuration
         close_to_goal = [dist_from_goal[i] < epsilon for i in range(len(dist_from_goal))]
-        print "close: " + str(close_to_goal)
+        #print "close: " + str(close_to_goal)
 
         # if all joints are close enough, robot is at goal
         at_goal = all(close_to_goal)
@@ -91,32 +94,58 @@ class PID(object):
         #Mq = arm.gen_Mq()
         # tau = Mq * q_des + tau_grav
         #self.u = (np.dot(Mq, q_des) + Gq).reshape(-1,)
-
+        #self.u = (q_des + Gq).reshape(-1,)
+        
         return self.u
 
-    def line_target(self, arm, dt=None):
-        """Generates a linear in C-space trajectory target"""
-        self.alpha = 1.0
-        #self.start = arm.q
-        print "s: " + str(self.start)
-        print "g: " + str(self.goal)
+    def draw_lintraj(self, arm):
+        """Returns sequence of (x,y) straight line trajectory pts"""
+        qs = np.array([arm.q])
+        X = np.array(0)
+        Y = np.array(0)
 
-        self.t_f = self.alpha*(np.linalg.norm(self.start-self.goal)**2)
+        print "totalT: " + str(self.Tf)
+        t = 0.0
+        while t < self.Tf:
+            target = (self.goal-self.start)*(1/self.Tf)*t + self.start
+            qs = np.append(qs, [target], axis=0)
+            t += 0.05 
+        for q in qs:
+            pos = arm.position(q)
+            X = np.append(X, pos[0][2])
+            Y = np.append(Y, pos[1][2])
+        return X, Y
+
+    def line_target(self, arm, dt=None, Fq=None):
+        """Generates a linear in C-space trajectory target"""
+        #self.start = arm.q
+
+        #print Fq
+        # if human exerting force, 
+        # then determing which direction to scale alpha      
+        if (Fq is not None) and np.linalg.norm(Fq) is not 0:
+            magnitude = np.linalg.norm(Fq)
+            # TODO: should this be (Fq - dirVecQ)? 
+            direction = np.arctan2(Fq[0], Fq[1])  
+            #print "mag, direction: " + str(magnitude) + ", " + str(direction)
+        self.t_f = self.alpha*(np.linalg.norm(self.start-self.goal))
 
         if dt is None:
             t = arm.t    
         else: 
             t = dt
+    
+        #print "s: " + str(self.start)
+        #print "g: " + str(self.goal)
+        #print "original total time (Tf): " + str(self.Tf)
+        #print "current total time (t_f): " + str(self.t_f) 
+        #print "current t: " + str(t) 
 
-        print "t: " + str(t) 
-
-        self.target = (self.goal-self.start)*(1/self.t_f)*t + self.start
-
-        print "target: " + str(self.target)
+        self.target = (self.goal-self.start)*(1/self.Tf)*t + self.start
 
         # if time after the final time, then just go to goal
-        if self.reached_goal or self.is_at_goal(arm):
-            print "is_at_goal"
+        if t >= self.Tf or self.reached_goal or self.is_at_goal(arm):
+            #print "is_at_goal"
             self.target = self.goal
             self.reached_goal = True
 
