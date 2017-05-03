@@ -62,8 +62,11 @@ class Simulator(object):
         self.ax.set_aspect(1) 
 
         if self.sim_type == LINEAR:
+            # plot original trajectory
             X, Y = self.planner.draw_lintraj(self.arm)
-            self.traj, = self.ax.plot(X, Y, 'o', color='r', lw=1, alpha=0.5)
+            self.ax.plot(X, Y, 'o', color='r', lw=1, alpha=0.3)
+            # plot that will be updated arm arm moves and replans
+            self.traj, = self.ax.plot(X, Y, 'o', color='r', lw=1, alpha=0.7)
 
         self.force_vector = self.ax.quiver(0, 0, 0, 0, angles='xy', scale_units='xy', scale=1, color='r')
         self.target_arm_line, = self.ax.plot([], [], 'o-', mew=4, color='b', lw=5, alpha=0.3)
@@ -101,7 +104,8 @@ class Simulator(object):
         self.target_arm_line.set_data([], [])
         self.force_vector.set_offsets([0, 0])
         self.force_vector.set_UVC(0, 0)
-        return self.info, self.target_arm_line, self.arm_line, self.force_vector
+        self.traj.set_data([], [])
+        return self.info, self.target_arm_line, self.traj, self.arm_line, self.force_vector
 
 
     def anim_animate(self, i):
@@ -130,14 +134,13 @@ class Simulator(object):
             # use:
             #deltat = self.arm.t                 # for no replanning (start = init_q)
             #deltat = self.arm.t + self.dt      # for no replanning, lookahead PID
-            deltat = self.dt                    # for replanning (start = arm.q)
+            deltat = self.dt + 0.02                    # for replanning (start = arm.q)
             replan = True
             self.target = self.planner.line_target(self.arm, deltat, self.Fq, replan)
 
             # update the trajectory we are following graphically
             X, Y = self.planner.draw_lintraj(self.arm)
             self.traj.set_data(X, Y)
-            #self.traj.set_color("blue")
 
         elif self.sim_type == RAND:
             # update target after specified period of time passes

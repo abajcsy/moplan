@@ -64,17 +64,16 @@ class Planner(object):
             direction  = np.dot(Fq, arm.q)
             
             print "alpha: " + str(self.alpha)
-            #self.start = arm.q
             if np.sign(direction) < 0:
-                if self.alpha + 0.01 > 2.0:
+                if self.alpha + 0.015 > 2.0:
                     self.alpha = 2.0 
                 else:
-                    self.alpha += 0.01
+                    self.alpha += 0.015
             elif np.sign(direction) > 0:
-                if self.alpha - 0.01 < 0.1:
-                    self.alpha = 0.01
+                if self.alpha - 0.015 < 0.1:
+                    self.alpha = 0.015
                 else: 
-                    self.alpha -= 0.01
+                    self.alpha -= 0.015
 
         t_f = self.alpha*(np.linalg.norm(self.start-self.goal))
 

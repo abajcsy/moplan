@@ -228,7 +228,7 @@ class Arm2Base(ArmBase):
         V2 = self.K4*S2*self.dq[0]**2.0
 
         # generate gravity forces matrix G(q)
-        g = -9.8
+        g = -9.81
         G1 = (self.m1 + self.m2)*g*self.l1*C1 + self.m2*g*self.l2*C12
         G2 = self.m2*g*self.l2*C12
         
