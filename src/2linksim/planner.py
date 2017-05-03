@@ -8,6 +8,8 @@ class Planner(object):
 
         self.alpha = alpha
         self.Tf = self.alpha*(np.linalg.norm(self.start-self.goal))
+        print "Original totalT: " + str(self.Tf)
+
 
         self.reached_goal = False
 
@@ -33,10 +35,13 @@ class Planner(object):
         X = np.array(0)
         Y = np.array(0)
 
-        print "totalT: " + str(self.Tf)
+        t_f = self.alpha*(np.linalg.norm(self.start-self.goal))
+
+        #print "totalT: " + str(t_f)
+
         t = 0.0
-        while t < self.Tf:
-            target = (self.goal-self.start)*(1/self.Tf)*t + self.start
+        while t < t_f:
+            target = (self.goal-self.start)*(1/t_f)*t + self.start
             qs = np.append(qs, [target], axis=0)
             t += 0.05 
         for q in qs:
@@ -45,9 +50,11 @@ class Planner(object):
             Y = np.append(Y, pos[1][2])
         return X, Y
 
-    def line_target(self, arm, dt=None, Fq=None):
+    def line_target(self, arm, dt=None, Fq=None, replan=False):
+
         """Generates a linear in C-space trajectory target"""
-        #self.start = arm.q
+        if replan:
+            self.start = arm.q
 
         # if human exerting force, 
         # then determing which direction to scale alpha      

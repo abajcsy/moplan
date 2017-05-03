@@ -39,12 +39,6 @@ class Arm2Base(ArmBase):
 
         self.rest_angles = np.array([np.pi/4.0, np.pi/4.0])
 
-        # calling reset sets up:
-        #   self.q = self.init_q
-        #   self.dq = self.init_dq
-        #   self.t = 0.0
-        self.reset()
-
         if dt is not None:
             self.dt = dt
 
@@ -56,8 +50,21 @@ class Arm2Base(ArmBase):
         self.K3 = self.m2 * self.l2**2.0
         self.K4 = self.m2 * self.l1 * self.l2
 
+        """
+        self.K1 = ((1/3. * self.m1 + self.m2) * self.l1**2. + 1/3. * self.m2 * self.l2**2.)
+        self.K2 = self.m2 * self.l1 * self.l2
+        self.K3 = 1/3. * self.m2 * self.l2**2.
+        self.K4 = 1/2. * self.m2 * self.l1 * self.l2
+        """
+
         # force at end-effecor
         self.fEE = np.array([0.0, 0.0])
+
+        # calling reset sets up:
+        #   self.q = self.init_q
+        #   self.dq = self.init_dq
+        #   self.t = 0.0
+        self.reset()
 
     def gen_jacCOM1(self, q=None):
         """
@@ -67,6 +74,8 @@ class Arm2Base(ArmBase):
         q = self.q if q is None else q
 
         JCOM1 = np.zeros((6,2))
+        #JCOM1[0,0] = self.l1 / 2. * -np.sin(q[0])
+        #JCOM1[1,0] = self.l1 / 2. * np.cos(q[0])
         JCOM1[0,0] = self.l1 * -np.sin(q[0])
         JCOM1[1,0] = self.l1 * np.cos(q[0])
         JCOM1[5,0] = 1.0
@@ -82,6 +91,8 @@ class Arm2Base(ArmBase):
 
         JCOM2 = np.zeros((6,2))
         # define column entries right to left
+        #JCOM2[0,1] = self.l2 / 2. * -np.sin(q[0]+q[1])
+        #JCOM2[1,1] = self.l2 / 2. * np.cos(q[0]+q[1])
         JCOM2[0,1] = self.l2 * -np.sin(q[0]+q[1])
         JCOM2[1,1] = self.l2 * np.cos(q[0]+q[1])
         JCOM2[5,1] = 1.0
@@ -142,14 +153,8 @@ class Arm2Base(ArmBase):
         """
         Fx = self.fEE if forceEE is None else forceEE
  
-        #print "Fx: " + str(Fx)
         JEE = self.gen_jacEE()
-        #print "JEE: " + str(JEE)
-        #print "JEE.T: " + str(JEE.T)
-        # TODO CHECK THAT COORDINATES ARE BEING MULTIPLIED RIGHT
         Fq = np.dot(JEE.T,Fx)
-
-        #print "Fq: " + str(Fq)
 
         return Fq
 
@@ -218,6 +223,7 @@ class Arm2Base(ArmBase):
         M22 = self.K3
 
         # generate coriolis forces matrix V(q,dq)
+        #print "dq: " + str(self.dq)
         V1 = -self.K4*S2*(2.0*self.dq[0]*self.dq[1] +self.dq[1]**2.0) 
         V2 = self.K4*S2*self.dq[0]**2.0
 
@@ -225,7 +231,7 @@ class Arm2Base(ArmBase):
         g = -9.8
         G1 = (self.m1 + self.m2)*g*self.l1*C1 + self.m2*g*self.l2*C12
         G2 = self.m2*g*self.l2*C12
-
+        
         # computation without gravity terms
         #ddq1 = (M11*u[1] - M21*u[0] + M21*V1 - M11*V2) / (M11*M22 - M12**2.0)
         #ddq0 = (u[0] - M12*ddq1 - V1 ) / M11
@@ -235,25 +241,11 @@ class Arm2Base(ArmBase):
         ddq1 = (M12*u[0] - M12*V1 - M12*G1 + M11*(V2 + G2 - u[1])) / (M12**2.0 - M22*M11)        
         ddq0 = (u[0] - M12*ddq1 - V1 - G1) / M11
 
-        """
-        print "u: " + str(u)
-        print "Old state:"
-        print "q: " + str(self.q)
-        print "dq: " + str(self.dq)
-        print "t: " + str(self.t)
-        """
         self.dq += np.array([ddq0, ddq1]) * dt
         self.q += self.dq * dt
 
         # transfer to next time step
         self.t += dt
-        """
-        print "New state after torque:"
-        print "q: " + str(self.q)
-        print "dq: " + str(self.dq)
-        print "ddq: [" + str(ddq0) + ", " + str(ddq1) + "]"
-        print "t: " + str(self.t)
-        """
 
     def plot(self, plt):
         """

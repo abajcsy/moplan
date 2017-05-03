@@ -127,15 +127,27 @@ class Simulator(object):
         # get target from controller
         if self.sim_type == LINEAR:
             # get new target along trajectory from planner
-            self.target = self.planner.line_target(self.arm, self.arm.t, self.Fq)
-            # make sure to update this target for the controller!
-            self.controller.target = self.target
+            # use:
+            #deltat = self.arm.t                 # for no replanning (start = init_q)
+            #deltat = self.arm.t + self.dt      # for no replanning, lookahead PID
+            deltat = self.dt                    # for replanning (start = arm.q)
+            replan = True
+            self.target = self.planner.line_target(self.arm, deltat, self.Fq, replan)
+
+            # update the trajectory we are following graphically
+            X, Y = self.planner.draw_lintraj(self.arm)
+            self.traj.set_data(X, Y)
+            #self.traj.set_color("blue")
+
         elif self.sim_type == RAND:
             # update target after specified period of time passes
             if self.sim_step % (self.target_steps*self.display_steps) == 0:
                 self.target = self.planner.rand_target(self.arm)
         elif self.sim_type == FORCE:
             self.target = self.controller.goal
+
+        # make sure to update this target for the controller!
+        self.controller.target = self.target
 
         # before drawing
         for j in range(self.display_steps):            
@@ -167,7 +179,7 @@ class Simulator(object):
         self.arm_line.set_data(*self.arm.position())
         self.info.set_text(self.make_info_text())
             
-        return self.info, self.target_arm_line, self.arm_line, self.force_vector
+        return self.info, self.target_arm_line, self.traj, self.arm_line, self.force_vector
 
     def show(self):
         try:
@@ -178,7 +190,10 @@ class Simulator(object):
 
 if __name__ == '__main__':
 
+    #init_q = [ 2.04279802,  1.38453601]
+    #init_q = [2.40195031,  1.6245857]    
     init_q = [0.75613, 1.8553]   
+    #init_q = [np.pi/4, np.pi/4]      
     init_dq = [0.0, 0.0]
     l1 = 0.31
     l2 = 0.27
@@ -191,11 +206,15 @@ if __name__ == '__main__':
     target_xy = np.array([0.2, -0.4])
     target_q = arm.inv_kinematics(target_xy)  
     
+    init_xy = [-0.4, 0.2]
+    start_q = arm.inv_kinematics(init_xy) 
+    print "new start?: " + str(start_q)
+    
     print "target_xy: " + str(target_xy)
     print "target_q: " + str(target_q)
 
     # setup controller
-    kp = 20; ki = 0; kd = 10
+    kp = 40; ki = 0; kd = 5
     print "kp: " + str(kp) + ", ki: " + str(ki) + ", kd: " + str(kd)
 
     start_q = arm.q
